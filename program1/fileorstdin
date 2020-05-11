@@ -1,0 +1,48 @@
+#!/bin/bash
+
+#stuff for checking parameters
+datafilepath="datafile"
+
+function clean_up {
+  #remove any emporary files
+  rm $datafile$$
+}
+trap clean_up SIGINT SIGHUP SIGTERM
+
+
+
+#datafilepath="datafile"
+if [ $# = 1 ]
+then
+   echo "one parameter"
+   if [[ $1 = -r* ]] || [[ $1 = -c* ]]
+   then
+      echo "valid first parameter, geting data from stdin"
+      cat > $datafilepath$$
+   else
+      echo "invalid first param for stdin"
+      echo "./stats {-rows|-cols} [file]">&2
+   fi
+elif [ $# = 2 ]
+then
+   echo "two parameters"
+   if [[ $1 = -r* ]] || [[ $1 = -c* ]]
+   then
+      echo "valid first paramter"
+      if [ -e $2 ]
+      then
+	 echo "valid filename"
+      else
+	 echo "invalid filename "
+      fi
+   else
+      echo "invalid first param two args"
+   fi
+else 
+   echo "too many or too few params"
+fi
+   
+if [ -e $datafile$$ ]
+then
+   rm $datafile$$
+fi

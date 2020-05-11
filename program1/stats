@@ -1,0 +1,195 @@
+#!/bin/bash
+
+#removes any temp files if they exist
+function clean_up {
+	if [ -e $workingfile$$ ]; then
+	   rm $workingfile$$
+	fi                            
+	
+	if [ -e $dataFile$$ ]; then
+	   rm $dataFile$$
+	fi
+	
+	if [ -e $tempcol$$ ]; then
+	   rm $tempcol$$
+	fi                            
+	
+	if [ -e $convertedfile$$ ]; then
+	   rm $convertedfile$$
+	fi                            
+	
+	if [ -e $tempmeans$$ ]; then
+	   rm $tempmeans$$
+	fi
+	
+	if [ -e $tempmed$$ ]; then
+	   rm $tempmed$$
+	fi                            
+	
+	if [ -e $templine$$ ]; then
+	   rm $templine$$
+	fi                            
+	
+	if [ -e $sortedcol$$ ]; then
+	   rm $sortedcol$$
+	fi                            
+	
+	if [ -e $printtemp$$ ]; then
+	   rm $printtemp$$
+	fi
+	
+	if [ $# = 1 ]; then
+	 exit 1
+        else
+	 exit 0
+        fi
+}
+
+trap clean_up  SIGINT SIGHUP SIGTERM
+
+
+#tempfiles
+
+workingfile="workingfile"
+dataFile="datafile"
+tempcol="tempcolfile"
+convertedfile="convertedfilewoo" 
+tempmeans="mymeans"
+tempmed="mymedians"  
+templine="medianline"
+sortedcol="sortedmed"
+printtemp="printtemp"
+
+#*****************************************************************************
+#checking parameters
+	#one param-> check -r or -c if valid get data from stdin
+	if [[ $# = 1 ]]; then
+   	    if [[ $1 = -r* ]] || [[ $1 = -c* ]]; then
+      		cat > $dataFile$$
+   	    else
+      		echo "./stats {-rows|-cols} [file]">&2
+      		clean_up 1
+   	    fi
+	#2 param -> check first is -r or -c and that file name is valid && readable	
+	elif [ $# = 2 ]; then
+  	    if [[ $1 = -r* ]] || [[ $1 = -c* ]]; then
+     		if [ -e $2 ] && [ -r $2 ]; then
+		    if [ -s $2 ]; then
+	   		cat $2 > $dataFile$$
+        	    else
+	   		clean_up
+	  	    fi
+     		else	
+      		    echo "./stats cannot read $2">&2
+      		    clean_up 1
+     		fi
+  	    else 
+      		echo "./stats {-rows|-cols} [file]">&2
+      		clean_up 1
+  	    fi
+	else 
+  	    echo "./stats {-rows|-cols} [file]">&2
+  	    clean_up 1
+	fi
+#****************************************************************************
+#check if calculating by rows or cols, if cols convert file
+	if [[ $1 = -r* ]]; then
+   	    cat $dataFile$$ > $workingfile$$
+	elif [[ $1 = -c* ]]; then 
+   	#cut each col turning it into a row and sending to temporary file 
+   	#determine number of colums
+   	    colcount=0
+   	    read -r firstline < $dataFile$$
+   	    for i in $firstline
+   		do
+      		   colcount=`expr $colcount + 1`
+   		done
+   		i=1
+   		while [ $i -le $colcount ]
+   		do
+      		   cut -f $i $dataFile$$ > $tempcol$$
+		   if [ $i == 1 ]; then
+	               cat $tempcol$$ | tr '\n' '\t' > $convertedfile$$
+     		   else
+	 		cat $tempcol$$ | tr '\n' '\t' >> $convertedfile$$
+      		    fi
+      		    echo >> $convertedfile$$
+      		    i=`expr $i + 1`
+   		done
+   	    cat $convertedfile$$ > $workingfile$$
+	fi
+
+#******************************************************************************
+#calculations:
+
+	first=0
+	while read myline
+	do
+   	#calculate average-iterate through line adding up numbers and increasing counter   
+   	    sum=0
+            divisor=0
+   	    for i in $myline
+   	    do
+      		sum=`expr $sum + $i`
+      		divisor=`expr $divisor + 1` 
+   	    done
+            mean=`expr \( $sum + \( $divisor / 2 \) \) / $divisor`
+	
+	#----------------------------------------------------------
+   
+        #calculate median-roundabout way of doing this but it works:
+	#convert current "row" into a col, use read to iterate through list until
+   	#reaching calculated middle point
+	
+	    midcount=0
+   	    median=0
+   	    echo $myline | tr " " "\n" > $templine$$
+   	    sort -n $templine$$ > $sortedcol$$
+   	    center=`expr $divisor / 2`
+   	    while read curline
+   	    do
+      	        if [ $midcount -lt $center ]; then
+	 	    midcount=`expr $midcount + 1`
+                else
+	 	    median=$curline
+	            break
+                fi
+   	    done < $sortedcol$$
+
+   	#--------------------------------------------------------
+
+   	#storing current line's mean and meadian to temp file
+
+   	    if [ $first == 0 ]; then
+      	        echo $mean > $tempmeans$$
+                echo $median > $tempmed$$
+                first=1
+   	    else
+      	        echo $mean >> $tempmeans$$
+      	        echo $median >> $tempmed$$
+   	    fi
+	done < $workingfile$$
+
+#*************************************************************************************
+
+#printing results
+	#display row data
+	if [[ $1 == -r* ]]; then
+   	    paste $tempmeans$$ $tempmed$$ > $printtemp$$
+   	    echo "Average Median"
+   	    cat $printtemp$$
+	#diaplay col data
+	else
+   	    echo "Averages:"
+   	    cat $tempmeans$$ | tr "\n" "\t" > $printtemp$$
+   	    echo >> $printtemp$$
+   	    cat $printtemp$$
+   	    echo "Medians:"
+            cat $tempmed$$ | tr "\n" "\t" > $printtemp$$
+   	    echo >> $printtemp$$
+   	    cat $printtemp$$   
+	fi
+	
+	#remove tempfiles
+	clean_up
+

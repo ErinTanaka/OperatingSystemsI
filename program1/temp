@@ -1,0 +1,38 @@
+#!/bin/bash
+
+inputFile="$1"
+
+tempcol="tempcolfile" 
+convertedfile="convertedfile"
+colcount=0
+#firstline="woot"
+read -r firstline < $inputFile 
+for i in $firstline
+do
+   colcount=`expr $colcount + 1`
+done
+echo "there are $colcount columns"
+i=0
+while [ $i -le $colcount ]
+do
+   echo "while loop $i"
+   cut -f $i $inputFile > $tempcol #grab col i
+   i=`expr $i + 1` #increment i for next run
+
+   if [ $i = 1 ] #tonver single column into row and send to converted file $$ 
+   then
+      cat $tempcol | tr '\n' '\t' > "$convertedfile$$"
+   else
+      cat $tempcol | tr '\n' '\t' >> "$convertedfile$$"
+   fi
+   echo >> $convertedfile$$ #add new line character
+   echo "current version oc converted file:"
+   cat $convertedfile$$
+
+done
+
+#seeing if files with spaces are the same as blank one
+
+
+rm $convertedfile$$
+

@@ -1,0 +1,25 @@
+#!/bin/bash
+
+#testing how expr division works
+
+
+myvar=`expr 4 / 3`
+echo "4/3= $myvar"
+
+myvar=`expr 21 / 4`
+echo "21/4= $myvar"
+
+myvar=`expr 36 / 5`
+echo "36/5= $myvar"
+
+myvar=`expr 100 / 9`
+echo "100/9= $myvar"
+
+myvar=`expr 576 / 5`
+echo "576/5= $myvar"
+
+myvar=`expr 7 / 3`
+echo "7/3= $myvar"
+
+myvar=`expr 8 / 3`
+echo "8/3= $myvar"
